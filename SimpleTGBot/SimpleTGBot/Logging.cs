@@ -1,0 +1,7 @@
+﻿namespace SimpleTGBot
+{
+    class Logging
+    {
+
+    }
+}
