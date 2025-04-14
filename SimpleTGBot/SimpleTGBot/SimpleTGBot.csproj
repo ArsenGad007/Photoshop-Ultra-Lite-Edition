@@ -12,4 +12,10 @@
     <PackageReference Include="Telegram.Bot" Version="22.5.0" />
   </ItemGroup>
 
+  <ItemGroup>
+    <None Update="token.txt">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
 </Project>

@@ -2,16 +2,17 @@
 using Telegram.Bot.Polling;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
-using SixLabors.ImageSharp;
-using SixLabors.ImageSharp.Processing;
 using static System.Console;
+using static SimpleTGBot.ImageFilters;
 
 using var cts = new CancellationTokenSource();
-var bot = new TelegramBotClient("7994207689:AAEXq6H7rmQHQT4W6R8Y8h7sCVTRntjAx6w", cancellationToken: cts.Token);
+var bot = new TelegramBotClient(File.ReadAllText("token.txt"), cancellationToken: cts.Token);
 var me = await bot.GetMe();
 
+// Глобальные переменные
 bool flag_filters = true;
 bool flag_nums = true;
+int num_filter = 0;
 
 bot.OnError += OnError;
 bot.OnMessage += OnMessage;
@@ -31,6 +32,10 @@ async Task OnMessage(Message msg, UpdateType type)
 {
     if (msg.Text == "/start")
     {
+        flag_filters = true;
+        flag_nums = true;
+        num_filter = 0;
+
         await bot.SendMessage(msg.Chat, $"Приветсвую {msg.From.FirstName}! Я вам помогу сделать базовую обработку фото. Чтобы выбрать фильтры напишите /filters"); 
         return;
     }
@@ -53,13 +58,7 @@ async Task OnMessage(Message msg, UpdateType type)
         return;
     }
 
-    if (flag_nums && msg.Text is not { } message)
-    {
-        await bot.SendMessage(msg.Chat, "Я вас не понимаю");
-        return;
-    }
-
-    if (flag_filters)
+    if (flag_filters || (flag_nums && msg.Text is not { } message))
     {
         await bot.SendMessage(msg.Chat, "Я вас не понимаю");
         return;
@@ -72,6 +71,7 @@ async Task OnMessage(Message msg, UpdateType type)
             await bot.SendMessage(msg.Chat, "Напишите цифру от 0 до 9");
             return;
         }
+        num_filter = int.Parse(msg.Text);
         flag_nums = false;
     }
 
@@ -81,11 +81,47 @@ async Task OnMessage(Message msg, UpdateType type)
         return;
     }
 
-    await bot.SendMessage(msg.Chat, "Фото ");
     var fileId = msg.Photo.Last().FileId;
     var tgFile = await bot.GetFile(fileId);
 
-    await using var stream = File.Create("downloaded.png");
-    await bot.DownloadFile(tgFile, stream);
-    return;
+    var inputPath = $"input_{msg.Chat.Id}_{msg.MessageId}.png";
+    var outputPath = $"output_{msg.Chat.Id}_{msg.MessageId}.png";
+
+    await using (var stream = new FileStream(inputPath, FileMode.Create))
+    {
+        await bot.DownloadFile(tgFile, stream);
+    }
+
+    switch (num_filter)
+    {
+        case 0:
+
+            break;
+        case 1:
+            await Invert_Colors(bot, msg.Chat, inputPath, outputPath);
+            break;
+        case 2:
+
+            break;
+        case 3:
+
+            break;
+        case 4:
+
+            break;
+        case 5:
+            break;
+        case 6:
+
+            break;
+        case 7:
+
+            break;
+        case 8:
+
+            break;
+        case 9:
+
+            break;
+    }
 }
