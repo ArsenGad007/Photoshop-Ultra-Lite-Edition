@@ -1,0 +1,6 @@
+﻿namespace SimpleTGBot
+{
+    class DataSave
+    {
+    }
+}
