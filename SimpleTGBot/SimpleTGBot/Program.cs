@@ -2,6 +2,7 @@
 using Telegram.Bot.Polling;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
+using Telegram.Bot.Types.ReplyMarkups;
 using static System.Console;
 using static SimpleTGBot.ImageFilters;
 using static SimpleTGBot.Logging;
@@ -27,6 +28,7 @@ foreach (string extension in new string[] { ".jpg", ".jpeg", ".png", ".gif", ".b
 
 bot.OnError += OnError;
 bot.OnMessage += OnMessage;
+bot.OnUpdate += OnUpdate;
 
 WriteLine($"@{me.Username} is running... Press Enter to terminate");
 ReadLine();
@@ -46,7 +48,26 @@ void AllGlobalVarDefault()
 }
 
 /// Метод, который обрабатывает ошибки
-async Task OnError(Exception exception, HandleErrorSource source) => WriteLine(exception); 
+async Task OnError(Exception exception, HandleErrorSource source) => WriteLine(exception);
+
+/// Метод, который обрабатывает кнопки
+async Task OnUpdate(Update update)
+{
+    if (update is { CallbackQuery: { } query }) 
+    {
+        num_filter = int.Parse(query.Data);
+        if (num_filter == 0)
+        {
+            flag_filters = true;
+            num_filter = -1;
+
+            await bot.SendMessage(query.Message.Chat, "Приходите ещё :)");
+            return;
+        }
+        await bot.SendMessage(query.Message.Chat, $"Выбран фильтр №{num_filter}");
+        await bot.SendMessage(query.Message.Chat, $"Отправьте ваше фото");     
+    }
+}
 
 /// Метод, который обрабатывает полученные сообщения
 async Task OnMessage(Message msg, UpdateType type)
@@ -63,6 +84,32 @@ async Task OnMessage(Message msg, UpdateType type)
     {
         AllGlobalVarDefault();
         flag_filters = false;
+
+        var inlineKeyboard = new InlineKeyboardMarkup(new[]
+        {
+            new[] // Первый ряд кнопок
+            {
+                InlineKeyboardButton.WithCallbackData("1"),
+                InlineKeyboardButton.WithCallbackData("2"),
+                InlineKeyboardButton.WithCallbackData("3")
+            },
+            new[] // Второй ряд кнопок
+            {
+                InlineKeyboardButton.WithCallbackData("4"),
+                InlineKeyboardButton.WithCallbackData("5"),
+                InlineKeyboardButton.WithCallbackData("6")
+            },
+            new[] // Третий ряд кнопок
+            {
+                InlineKeyboardButton.WithCallbackData("7"),
+                InlineKeyboardButton.WithCallbackData("8"),
+                InlineKeyboardButton.WithCallbackData("9")
+            },
+            new[] // Четвертый ряд (только кнопка 0)
+            {
+                InlineKeyboardButton.WithCallbackData("0 - Выход", "0")
+            }
+        });
         await bot.SendMessage(msg.Chat,
             "Напишите нужную цифру:\n" +
             "0) Выход\n" +
@@ -74,7 +121,7 @@ async Task OnMessage(Message msg, UpdateType type)
             "6) Добавить виньетку\n" +
             "7) Усиление красного канала\n" +
             "8) Усиление зелёного канала\n" +
-            "9) Усиление синего канала");
+            "9) Усиление синего канала", replyMarkup: inlineKeyboard);
         WriteLog($"Пользователь с id {msg.From.Id} написал {msg.Text}");
         return;
     }
@@ -92,7 +139,9 @@ async Task OnMessage(Message msg, UpdateType type)
             await bot.SendMessage(msg.Chat, "Напишите цифру от 0 до 9");
             return;
         }
-        num_filter = int.Parse(msg.Text);       
+        num_filter = int.Parse(msg.Text);
+        if (num_filter != 0)
+            await bot.SendMessage(msg.Chat, $"Выбран фильтр №{num_filter}");
     }
 
     if (image_name == "" && num_filter != 0)
