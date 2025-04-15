@@ -48,7 +48,7 @@ void AllGlobalVarDefault()
 }
 
 /// Метод, который обрабатывает ошибки
-async Task OnError(Exception exception, HandleErrorSource source) => WriteLine(exception);
+async Task OnError(Exception exception, HandleErrorSource source) => ErrorWriteLog(exception.ToString());
 
 /// Метод, который обрабатывает кнопки
 async Task OnUpdate(Update update)
@@ -64,6 +64,8 @@ async Task OnUpdate(Update update)
             await bot.SendMessage(query.Message.Chat, "Приходите ещё :)");
             return;
         }
+
+        WriteLog($"Пользователь с id {query.From.Id} выбрал фильтр №{num_filter}");
         await bot.SendMessage(query.Message.Chat, $"Выбран фильтр №{num_filter}");
         await bot.SendMessage(query.Message.Chat, $"Отправьте ваше фото");     
     }
@@ -83,6 +85,8 @@ async Task OnMessage(Message msg, UpdateType type)
     if (msg.Text == "/filters")
     {
         AllGlobalVarDefault();
+        WriteLog($"Пользователь с id {msg.From.Id} написал {msg.Text}");
+
         flag_filters = false;
 
         var inlineKeyboard = new InlineKeyboardMarkup(new[]
@@ -110,6 +114,7 @@ async Task OnMessage(Message msg, UpdateType type)
                 InlineKeyboardButton.WithCallbackData("0 - Выход", "0")
             }
         });
+
         await bot.SendMessage(msg.Chat,
             "Напишите нужную цифру:\n" +
             "0) Выход\n" +
@@ -122,7 +127,6 @@ async Task OnMessage(Message msg, UpdateType type)
             "7) Усиление красного канала\n" +
             "8) Усиление зелёного канала\n" +
             "9) Усиление синего канала", replyMarkup: inlineKeyboard);
-        WriteLog($"Пользователь с id {msg.From.Id} написал {msg.Text}");
         return;
     }
 
@@ -139,9 +143,14 @@ async Task OnMessage(Message msg, UpdateType type)
             await bot.SendMessage(msg.Chat, "Напишите цифру от 0 до 9");
             return;
         }
+
         num_filter = int.Parse(msg.Text);
+
         if (num_filter != 0)
+        {
             await bot.SendMessage(msg.Chat, $"Выбран фильтр №{num_filter}");
+            WriteLog($"Пользователь с id {msg.From.Id} выбрал фильтр №{num_filter}");
+        }
     }
 
     if (image_name == "" && num_filter != 0)
@@ -151,6 +160,7 @@ async Task OnMessage(Message msg, UpdateType type)
             await bot.SendMessage(msg.Chat, "Отправьте ваше фото");
             return;
         }
+        WriteLog($"Пользователь с id {msg.From.Id} отправил фото");
 
         var fileId = msg.Photo.Last().FileId;
         var tgFile = await bot.GetFile(fileId);
@@ -178,7 +188,7 @@ async Task OnMessage(Message msg, UpdateType type)
         case 0:
             flag_filters = true;
             num_filter = -1;
-
+            WriteLog($"Пользователь с id {msg.From.Id} вышел");
             await bot.SendMessage(msg.Chat, "Приходите ещё :)");
             return;
 
@@ -200,6 +210,8 @@ async Task OnMessage(Message msg, UpdateType type)
                 return;
             }
 
+            WriteLog($"Пользователь с id {msg.From.Id} ввёл ширину {user_input}");
+
             if (choose_height == -1)
             {
                 choose_height = 0;
@@ -207,6 +219,8 @@ async Task OnMessage(Message msg, UpdateType type)
                 await bot.SendMessage(msg.Chat, $"Введите высоту (от 10 до {img_height})");
                 return;
             }
+
+            WriteLog($"Пользователь с id {msg.From.Id} ввёл высоту {user_input}");
 
             choose_height = user_input;
             double aspectRatio = (double)choose_weight / choose_height;
@@ -243,6 +257,8 @@ async Task OnMessage(Message msg, UpdateType type)
                 return;
             }
 
+            WriteLog($"Пользователь с id {msg.From.Id} ввёл интенсивность {user_input}");
+
             await ContrastFilter(bot, msg.Chat, image_name, user_input > 0 ? 1f + (float)user_input / 10 : ((float)user_input + 10) / 10);
             break;
 
@@ -259,6 +275,8 @@ async Task OnMessage(Message msg, UpdateType type)
                 await bot.SendMessage(msg.Chat, $"Нужно ввести число от -10 до 10");
                 return;
             }
+
+            WriteLog($"Пользователь с id {msg.From.Id} ввёл интенсивность {user_input}");
 
             await BrightnessFilter(bot, msg.Chat, image_name, user_input > 0 ? 1f + (float)user_input / 10 : ((float)user_input + 10) / 10);
             break;
@@ -281,6 +299,8 @@ async Task OnMessage(Message msg, UpdateType type)
                 return;
             }
 
+            WriteLog($"Пользователь с id {msg.From.Id} ввёл силу усиления {user_input}");
+
             await RedFilter(bot, msg.Chat, image_name, (byte)user_input);
             break;
 
@@ -298,6 +318,8 @@ async Task OnMessage(Message msg, UpdateType type)
                 return;
             }
 
+            WriteLog($"Пользователь с id {msg.From.Id} ввёл силу усиления {user_input}");
+
             await GreenFilter(bot, msg.Chat, image_name, (byte)user_input);
             break;
 
@@ -314,7 +336,9 @@ async Task OnMessage(Message msg, UpdateType type)
                 await bot.SendMessage(msg.Chat, $"Нужно ввести число от 0 до 255");
                 return;
             }
-            
+
+            WriteLog($"Пользователь с id {msg.From.Id} ввёл силу усиления {user_input}");
+
             await BlueFilter(bot, msg.Chat, image_name, (byte)user_input);
             break;
     }
