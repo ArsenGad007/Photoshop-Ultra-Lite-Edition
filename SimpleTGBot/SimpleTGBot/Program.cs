@@ -8,6 +8,7 @@ using static SimpleTGBot.ImageFilters;
 using static SimpleTGBot.Logging;
 using static SimpleTGBot.DataSave;
 
+/// Базовые настройки бота
 using var cts = new CancellationTokenSource();
 var bot = new TelegramBotClient(File.ReadAllText("token.txt"), cancellationToken: cts.Token);
 var me = await bot.GetMe();
@@ -17,13 +18,14 @@ foreach (string extension in new string[] { ".jpg", ".jpeg", ".png", ".gif", ".b
     foreach (string file in Directory.GetFiles(Directory.GetCurrentDirectory(), $"*{extension}"))
         File.Delete(file);
 
+/// Добавляем обработчики
 bot.OnError += OnError;
 bot.OnMessage += OnMessage;
 bot.OnUpdate += OnUpdate;
 
 WriteLine($"@{me.Username} is running... Press Enter to terminate");
 ReadLine();
-cts.Cancel(); // Остановить бота
+cts.Cancel(); // Останавливает бота
 
 /// Метод, который обрабатывает ошибки
 async Task OnError(Exception exception, HandleErrorSource source) => ErrorWriteLog(exception.ToString());
@@ -108,6 +110,7 @@ async Task OnMessage(Message msg, UpdateType type)
         return;
     }
 
+    /// Сначала проверяет, что мы писали /filters. Затем проверяет был ли запрос на отправку изображения (или проверяет, что пользователь не выбирал номер фильтра). И наконец проверяет, что сообщение это не текст
     if (await GetValueJSON<bool>(msg.From.Id, UserParam.FlagFilters) ||
         (await GetValueJSON<string>(msg.From.Id, UserParam.ImageName) != "" || await GetValueJSON<int>(msg.From.Id, UserParam.NumFilter) == -1) &&
         msg.Text is not { } message)
@@ -116,6 +119,7 @@ async Task OnMessage(Message msg, UpdateType type)
         return;
     }
 
+    /// Проверяет, что мы не выбирали номер фильтра
     if (await GetValueJSON<int>(msg.From.Id, UserParam.NumFilter) == -1)
     {
         if (!new string[] { "0", "1", "2", "3", "4", "5", "6", "7", "8", "9" }.Contains(msg.Text))
@@ -133,6 +137,7 @@ async Task OnMessage(Message msg, UpdateType type)
         }
     }
 
+    /// Проверяет, что пользователь не отправлял изображение, и что он выбрал номер фильтра
     if (await GetValueJSON<string>(msg.From.Id, UserParam.ImageName) == "" &&
         await GetValueJSON<int>(msg.From.Id, UserParam.NumFilter) != 0)
     {
@@ -170,7 +175,7 @@ async Task OnMessage(Message msg, UpdateType type)
 
     switch (await GetValueJSON<int>(msg.From.Id, UserParam.NumFilter))
     {
-        case 0:
+        case 0: // Выход
             await AddValueJSON(msg.From.Id, UserParam.FlagFilters, true);
             await AddValueJSON(msg.From.Id, UserParam.NumFilter, -1);
 
@@ -178,11 +183,11 @@ async Task OnMessage(Message msg, UpdateType type)
             await bot.SendMessage(msg.Chat, "Приходите ещё :). Напишите /filters для продолжения");
             return;
 
-        case 1:
+        case 1: // Фильтр, который инвертирует цвета
             await Invert_Colors(bot, msg.Chat, await GetValueJSON<string>(msg.From.Id, UserParam.ImageName));
             break;
 
-        case 2:
+        case 2: // Фильтр, который изменяет размер
             if (await GetValueJSON<int>(msg.From.Id, UserParam.ChooseWidth) == -1)
             {
                 await AddValueJSON(msg.From.Id, UserParam.ChooseWidth, 0);
@@ -234,11 +239,11 @@ async Task OnMessage(Message msg, UpdateType type)
 
             break;
 
-        case 3:
+        case 3: // ЧБ фильтр 
             await BWFilter(bot, msg.Chat, await GetValueJSON<string>(msg.From.Id, UserParam.ImageName));
             break;
 
-        case 4:
+        case 4: // Фильтр, который увеличивает контраст
             if (await GetValueJSON<int>(msg.From.Id, UserParam.UserInput) == -1)
             {
                 await AddValueJSON(msg.From.Id, UserParam.UserInput, 0);
@@ -262,7 +267,7 @@ async Task OnMessage(Message msg, UpdateType type)
                 ((float)await GetValueJSON<int>(msg.From.Id, UserParam.UserInput) + 10) / 10);
             break;
 
-        case 5:
+        case 5: // Фильтр, который увеличивает яркость
             if (await GetValueJSON<int>(msg.From.Id, UserParam.UserInput) == -1)
             {
                 await AddValueJSON(msg.From.Id, UserParam.UserInput, 0);
@@ -286,11 +291,11 @@ async Task OnMessage(Message msg, UpdateType type)
                 ((float)await GetValueJSON<int>(msg.From.Id, UserParam.UserInput) + 10) / 10);
             break;
 
-        case 6:
+        case 6: // Фильтр, который добавляет виньетку
             await VignetteFilter(bot, msg.Chat, await GetValueJSON<string>(msg.From.Id, UserParam.ImageName));
             break;
 
-        case 7:
+        case 7: // Фильтр, который увеличивает красный тон
             if (await GetValueJSON<int>(msg.From.Id, UserParam.UserInput) == -1)
             {
                 await AddValueJSON(msg.From.Id, UserParam.UserInput, 0);
@@ -310,7 +315,7 @@ async Task OnMessage(Message msg, UpdateType type)
             await RedFilter(bot, msg.Chat, await GetValueJSON<string>(msg.From.Id, UserParam.ImageName), (byte)await GetValueJSON<int>(msg.From.Id, UserParam.UserInput));
             break;
 
-        case 8:
+        case 8: // Фильтр, который увеличивает зелёный тон
             if (await GetValueJSON<int>(msg.From.Id, UserParam.UserInput) == -1)
             {
                 await AddValueJSON(msg.From.Id, UserParam.UserInput, 0);
@@ -330,7 +335,7 @@ async Task OnMessage(Message msg, UpdateType type)
             await GreenFilter(bot, msg.Chat, await GetValueJSON<string>(msg.From.Id, UserParam.ImageName), (byte)await GetValueJSON<int>(msg.From.Id, UserParam.UserInput));
             break;
 
-        case 9:
+        case 9: // Фильтр, который увеличивает синий тон
             if (await GetValueJSON<int>(msg.From.Id, UserParam.UserInput) == -1)
             {
                 await AddValueJSON(msg.From.Id, UserParam.UserInput, 0);

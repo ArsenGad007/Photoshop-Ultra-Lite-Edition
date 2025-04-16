@@ -6,10 +6,13 @@ using Telegram.Bot.Types;
 
 namespace SimpleTGBot
 {
+    /// <summary>
+    /// Класс, который хранит все фильтры для изменения изображения
+    /// </summary>
     class ImageFilters
     {
         /// <summary>
-        /// Инвертирует цвета
+        /// Инвертирует цвета изображения
         /// </summary>
         /// <param name="bot"></param>
         /// <param name="chatId"></param>
@@ -55,7 +58,7 @@ namespace SimpleTGBot
         }
 
         /// <summary>
-        /// Чёрно белый фильтр
+        /// Преобразует в чёрно-белое изображение
         /// </summary>
         /// <param name="bot"></param>
         /// <param name="chatId"></param>
@@ -77,7 +80,7 @@ namespace SimpleTGBot
         }
 
         /// <summary>
-        /// Увеличение контраста
+        /// Увеличивает контраст изображения
         /// </summary>
         /// <param name="bot"></param>
         /// <param name="chatId"></param>
@@ -100,7 +103,7 @@ namespace SimpleTGBot
         }
 
         /// <summary>
-        /// Увеличение яркости
+        /// Увеличивает яркость изображения
         /// </summary>
         /// <param name="bot"></param>
         /// <param name="chatId"></param>
@@ -123,7 +126,7 @@ namespace SimpleTGBot
         }
 
         /// <summary>
-        /// Добавить виньетку
+        /// Добавляет виньетку к изображению
         /// </summary>
         /// <param name="bot"></param>
         /// <param name="chatId"></param>
@@ -145,7 +148,7 @@ namespace SimpleTGBot
         }
 
         /// <summary>
-        /// Усиление красного канала
+        /// Усиливает красный канал в изображении
         /// </summary>
         /// <param name="bot"></param>
         /// <param name="chatId"></param>
@@ -174,7 +177,7 @@ namespace SimpleTGBot
         }
 
         /// <summary>
-        /// Усиление зелёного канала
+        /// Усиливает зелёный канал в изображении
         /// </summary>
         /// <param name="bot"></param>
         /// <param name="chatId"></param>
@@ -203,7 +206,7 @@ namespace SimpleTGBot
         }
 
         /// <summary>
-        /// Усиление синего канала
+        /// Усиливает синий канал в изображении
         /// </summary>
         /// <param name="bot"></param>
         /// <param name="chatId"></param>

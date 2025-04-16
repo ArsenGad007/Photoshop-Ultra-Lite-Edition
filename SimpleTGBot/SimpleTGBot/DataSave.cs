@@ -1,15 +1,17 @@
 ﻿using System.Text.Json;
-using System.Threading.Tasks;
 
 namespace SimpleTGBot
 {
+    /// <summary>
+    /// Класс, который сохраняет данные о пользователе в JSON файле
+    /// </summary>
     class DataSave  
     {
         public enum UserParam { FlagFilters, NumFilter, ImgWidth, ImgHeight, ChooseWidth, ChooseHeight, UserInput, ImageName }
         private static readonly string FilePath = "users.json";
 
         /// <summary>
-        /// Чтение всех пользователей из JSON
+        /// Вспомогательная функция для чтения всех пользователей из JSON
         /// </summary>
         /// <returns></returns>
         private static async Task<Dictionary<long, Person>> ReadUsers()
@@ -20,7 +22,7 @@ namespace SimpleTGBot
         }
 
         /// <summary>
-        /// Сохранение всех пользователей в JSON
+        /// Вспомогательная функция для сохранения всех пользователей в JSON
         /// </summary>
         /// <param name="users"></param>
         private static async Task SaveUsers(Dictionary<long, Person> users)
@@ -29,7 +31,7 @@ namespace SimpleTGBot
         }
 
         /// <summary>
-        /// Добавление нового пользователя
+        /// Добавляет нового пользователя
         /// </summary>
         /// <param name="id"></param>
         public static async Task InitUserJSON(long id)
@@ -40,7 +42,7 @@ namespace SimpleTGBot
         }
 
         /// <summary>
-        /// Добавление значения параметра пользователя
+        /// Устанавливает значение параметра пользователя
         /// </summary>
         /// <typeparam name="T"></typeparam>
         /// <param name="id"></param>
@@ -49,9 +51,6 @@ namespace SimpleTGBot
         /// <exception cref="ArgumentException"></exception>
         public static async Task AddValueJSON<T>(long id, UserParam parameter, T value)
         {
-            if (value == null)
-                throw new ArgumentException();
-
             var users = await ReadUsers();
             if (!users.ContainsKey(id))
                 users[id] = new Person();
@@ -96,7 +95,7 @@ namespace SimpleTGBot
         }
 
         /// <summary>
-        /// Получение значения параметра пользователя
+        /// Получает значение параметра пользователя
         /// </summary>
         /// <typeparam name="T"></typeparam>
         /// <param name="id"></param>
@@ -125,11 +124,12 @@ namespace SimpleTGBot
         }
 
         /// <summary>
-        /// Удаление пользователя
+        /// Удаляет пользователя
         /// </summary>
         /// <param name="id"></param>
         public static async Task DeleteUserJSON(long id)
         {
+            // Эту функцию я нигде не использую. Оставил я её для возможной дальнейшей масштабируемости проекта
             var users = await ReadUsers();
             if (users.Remove(id))
                 await SaveUsers(users);

@@ -1,5 +1,8 @@
 ﻿namespace SimpleTGBot
 {
+    /// <summary>
+    /// Вспомогательный класс, который хранит стартовые значения всех параметров пользователя
+    /// </summary>
     public class Person
     {
         /// <summary>
