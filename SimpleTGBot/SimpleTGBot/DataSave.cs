@@ -1,4 +1,5 @@
 ﻿using System.Text.Json;
+using System.Threading.Tasks;
 
 namespace SimpleTGBot
 {
@@ -11,31 +12,31 @@ namespace SimpleTGBot
         /// Чтение всех пользователей из JSON
         /// </summary>
         /// <returns></returns>
-        private static Dictionary<long, Person> ReadUsers()
+        private static async Task<Dictionary<long, Person>> ReadUsers()
         {
             if (!File.Exists(FilePath))
                 return new();
-            return JsonSerializer.Deserialize<Dictionary<long, Person>>(File.ReadAllText(FilePath)) ?? new();
+            return JsonSerializer.Deserialize<Dictionary<long, Person>>(await File.ReadAllTextAsync(FilePath)) ?? new();
         }
 
         /// <summary>
         /// Сохранение всех пользователей в JSON
         /// </summary>
         /// <param name="users"></param>
-        private static void SaveUsers(Dictionary<long, Person> users)
+        private static async Task SaveUsers(Dictionary<long, Person> users)
         {
-            File.WriteAllText(FilePath, JsonSerializer.Serialize(users, new JsonSerializerOptions { WriteIndented = true }));
+            await File.WriteAllTextAsync(FilePath, JsonSerializer.Serialize(users, new JsonSerializerOptions { WriteIndented = true }));
         }
 
         /// <summary>
         /// Добавление нового пользователя
         /// </summary>
         /// <param name="id"></param>
-        public static void InitUserJSON(long id)
+        public static async Task InitUserJSON(long id)
         {
-            var users = ReadUsers();
+            var users = await ReadUsers();
             users[id] = new Person();
-            SaveUsers(users);
+            await SaveUsers(users);
         }
 
         /// <summary>
@@ -46,17 +47,14 @@ namespace SimpleTGBot
         /// <param name="parameter"></param>
         /// <param name="value"></param>
         /// <exception cref="ArgumentException"></exception>
-        public static void AddValueJSON<T>(long id, UserParam parameter, T value)
+        public static async Task AddValueJSON<T>(long id, UserParam parameter, T value)
         {
             if (value == null)
                 throw new ArgumentException();
 
-            var users = ReadUsers();
+            var users = await ReadUsers();
             if (!users.ContainsKey(id))
-            {
-                InitUserJSON(id);
-                users = ReadUsers();
-            }
+                users[id] = new Person();
                 
             switch (parameter)
             {
@@ -94,7 +92,7 @@ namespace SimpleTGBot
                     break;
             }
 
-            SaveUsers(users);
+            await SaveUsers(users);
         }
 
         /// <summary>
@@ -104,9 +102,12 @@ namespace SimpleTGBot
         /// <param name="id"></param>
         /// <param name="parameter"></param>
         /// <returns></returns>
-        public static T GetValueJSON<T>(long id, UserParam parameter)
+        public static async Task<T> GetValueJSON<T>(long id, UserParam parameter)
         {
-            var users = ReadUsers();
+            var users = await ReadUsers();
+            if (!users.ContainsKey(id))
+                return default;
+
             object? result = parameter switch
             {
                 UserParam.FlagFilters => users[id].FlagFilters,
@@ -119,6 +120,7 @@ namespace SimpleTGBot
                 UserParam.ImageName => users[id].ImageName,
                 _ => null
             };
+
             return result is T resultT ? resultT : default;
         }
 
@@ -126,11 +128,11 @@ namespace SimpleTGBot
         /// Удаление пользователя
         /// </summary>
         /// <param name="id"></param>
-        public static void DeleteUserJSON(long id)
+        public static async Task DeleteUserJSON(long id)
         {
-            var users = ReadUsers();
+            var users = await ReadUsers();
             if (users.Remove(id))
-                SaveUsers(users);
+                await SaveUsers(users);
         }
     }
 }
