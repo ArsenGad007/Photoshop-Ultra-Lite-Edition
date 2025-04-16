@@ -6,20 +6,11 @@ using Telegram.Bot.Types.ReplyMarkups;
 using static System.Console;
 using static SimpleTGBot.ImageFilters;
 using static SimpleTGBot.Logging;
+using static SimpleTGBot.DataSave;
 
 using var cts = new CancellationTokenSource();
 var bot = new TelegramBotClient(File.ReadAllText("token.txt"), cancellationToken: cts.Token);
 var me = await bot.GetMe();
-
-// Глобальные переменные
-bool flag_filters = true;   // Флаг на срабатывание /filters
-int num_filter = -1;        // Хранит номер фильтра
-int img_width = 0;          // Хранит ширину изображения (нужен для фильтра "Изменение размера")
-int img_height = 0;         // Хранит высоту изображения (нужен для фильтра "Изменение размера")
-int choose_weight = -1;     // Хранит выбранную ширину изображения (нужен для фильтра "Изменение размера")
-int choose_height = -1;     // Хранит выбранную высоту изображения (нужен для фильтра "Изменение размера")
-int user_input = -1;        // Хранит ответ пользователя
-string image_name = "";     // Хранит имя изображения
 
 /// Удаляет все (предыдущие) изображения в директории
 foreach (string extension in new string[] { ".jpg", ".jpeg", ".png", ".gif", ".bmp", ".webp" })
@@ -34,19 +25,6 @@ WriteLine($"@{me.Username} is running... Press Enter to terminate");
 ReadLine();
 cts.Cancel(); // Остановить бота
 
-/// Обнуляет все глобальные переменные
-void AllGlobalVarDefault()
-{
-    flag_filters = true;   
-    num_filter = -1;       
-    img_width = 0;         
-    img_height = 0;        
-    choose_weight = -1;    
-    choose_height = -1;    
-    user_input = -1;        
-    image_name = "";
-}
-
 /// Метод, который обрабатывает ошибки
 async Task OnError(Exception exception, HandleErrorSource source) => ErrorWriteLog(exception.ToString());
 
@@ -55,18 +33,19 @@ async Task OnUpdate(Update update)
 {
     if (update is { CallbackQuery: { } query }) 
     {
-        num_filter = int.Parse(query.Data);
-        if (num_filter == 0)
+        AddValueJSON(query.From.Id, UserParam.NumFilter, int.Parse(query.Data));
+        
+        if (GetValueJSON<int>(query.From.Id, UserParam.NumFilter) == 0)
         {
-            flag_filters = true;
-            num_filter = -1;
+            AddValueJSON(query.From.Id, UserParam.FlagFilters, true);
+            AddValueJSON(query.From.Id, UserParam.NumFilter, -1);
 
             await bot.SendMessage(query.Message.Chat, "Приходите ещё :)");
             return;
         }
 
-        WriteLog($"Пользователь с id {query.From.Id} выбрал фильтр №{num_filter}");
-        await bot.SendMessage(query.Message.Chat, $"Выбран фильтр №{num_filter}");
+        WriteLog($"Пользователь с id {query.From.Id} выбрал фильтр №{GetValueJSON<int>(query.From.Id, UserParam.NumFilter)}");
+        await bot.SendMessage(query.Message.Chat, $"Выбран фильтр №{GetValueJSON<int>(query.From.Id, UserParam.NumFilter)}");
         await bot.SendMessage(query.Message.Chat, $"Отправьте ваше фото");     
     }
 }
@@ -76,7 +55,7 @@ async Task OnMessage(Message msg, UpdateType type)
 {
     if (msg.Text == "/start")
     {
-        AllGlobalVarDefault();
+        InitUserJSON(msg.From.Id);
         await bot.SendMessage(msg.Chat, $"Приветсвую {msg.From.FirstName}! Я вам помогу сделать базовую обработку фото. Чтобы выбрать фильтры напишите /filters");
         WriteLog($"Пользователь с id {msg.From.Id} написал {msg.Text}");
         return;
@@ -84,10 +63,9 @@ async Task OnMessage(Message msg, UpdateType type)
 
     if (msg.Text == "/filters")
     {
-        AllGlobalVarDefault();
         WriteLog($"Пользователь с id {msg.From.Id} написал {msg.Text}");
 
-        flag_filters = false;
+        AddValueJSON(msg.From.Id, UserParam.FlagFilters, false);
 
         var inlineKeyboard = new InlineKeyboardMarkup(new[]
         {
@@ -129,14 +107,16 @@ async Task OnMessage(Message msg, UpdateType type)
             "9) Усиление синего канала", replyMarkup: inlineKeyboard);
         return;
     }
-
-    if (flag_filters || (image_name != "" || num_filter == -1) && msg.Text is not { } message)
+    
+    if (GetValueJSON<bool>(msg.From.Id, UserParam.FlagFilters) || 
+        (GetValueJSON<string>(msg.From.Id, UserParam.ImageName) != "" || GetValueJSON<int>(msg.From.Id, UserParam.NumFilter) == -1) && 
+        msg.Text is not { } message)
     {
         await bot.SendMessage(msg.Chat, "Я вас не понимаю");
         return;
     }
 
-    if (num_filter == -1)
+    if (GetValueJSON<int>(msg.From.Id, UserParam.NumFilter) == -1)
     {
         if (!new string[] { "0", "1", "2", "3", "4", "5", "6", "7", "8", "9" }.Contains(msg.Text))
         {
@@ -144,16 +124,17 @@ async Task OnMessage(Message msg, UpdateType type)
             return;
         }
 
-        num_filter = int.Parse(msg.Text);
+        AddValueJSON(msg.From.Id, UserParam.NumFilter, int.Parse(msg.Text));
 
-        if (num_filter != 0)
+        if (GetValueJSON<int>(msg.From.Id, UserParam.NumFilter) != 0)
         {
-            await bot.SendMessage(msg.Chat, $"Выбран фильтр №{num_filter}");
-            WriteLog($"Пользователь с id {msg.From.Id} выбрал фильтр №{num_filter}");
+            await bot.SendMessage(msg.Chat, $"Выбран фильтр №{GetValueJSON<int>(msg.From.Id, UserParam.NumFilter)}");
+            WriteLog($"Пользователь с id {msg.From.Id} выбрал фильтр №{GetValueJSON<int>(msg.From.Id, UserParam.NumFilter)}");
         }
     }
-
-    if (image_name == "" && num_filter != 0)
+ 
+    if (GetValueJSON<string>(msg.From.Id, UserParam.ImageName) == "" && 
+        GetValueJSON<int>(msg.From.Id, UserParam.NumFilter) != 0)
     {
         if(msg.Photo == null)
         {
@@ -165,185 +146,211 @@ async Task OnMessage(Message msg, UpdateType type)
         var fileId = msg.Photo.Last().FileId;
         var tgFile = await bot.GetFile(fileId);
 
-        image_name = $"image{msg.Chat.Id}_{msg.MessageId}.png";
+        AddValueJSON(msg.From.Id, UserParam.ImageName, $"image{msg.Chat.Id}_{msg.MessageId}.png");
 
-        await using (var stream = new FileStream(image_name, FileMode.Create))
+        await using (var stream = new FileStream(GetValueJSON<string>(msg.From.Id, UserParam.ImageName), FileMode.Create))
             await bot.DownloadFile(tgFile, stream);
 
         // Получаем ширину и высоту
-        using (var image = SixLabors.ImageSharp.Image.Load(image_name))
-            (img_width, img_height) = (image.Width, image.Height);
-
-        if (img_width < 10 || img_height < 10)
+        using (var image = SixLabors.ImageSharp.Image.Load(GetValueJSON<string>(msg.From.Id, UserParam.ImageName)))
         {
-            image_name = "";
+            AddValueJSON(msg.From.Id, UserParam.ImgWidth, image.Width);
+            AddValueJSON(msg.From.Id, UserParam.ImgHeight, image.Height);
+        }
+        
+        if (GetValueJSON<int>(msg.From.Id, UserParam.ImgWidth) < 10 || 
+            GetValueJSON<int>(msg.From.Id, UserParam.ImgHeight) < 10)
+        {
+            AddValueJSON(msg.From.Id, UserParam.ImageName, "");
             await bot.SendMessage(msg.Chat, "Слишком маленькие размеры изображения");
             await bot.SendMessage(msg.Chat, "Отправьте другое фото");
             return;
         }
     }
 
-    switch (num_filter)
+    switch (GetValueJSON<int>(msg.From.Id, UserParam.NumFilter))
     {
         case 0:
-            flag_filters = true;
-            num_filter = -1;
+            AddValueJSON(msg.From.Id, UserParam.FlagFilters, true);
+            AddValueJSON(msg.From.Id, UserParam.NumFilter, -1);
             WriteLog($"Пользователь с id {msg.From.Id} вышел");
             await bot.SendMessage(msg.Chat, "Приходите ещё :)");
             return;
 
         case 1:
-            await Invert_Colors(bot, msg.Chat, image_name);
+            await Invert_Colors(bot, msg.Chat, GetValueJSON<string>(msg.From.Id, UserParam.ImageName));
             break;
 
-        case 2:
-            if (choose_weight == -1)
+        case 2:       
+            if (GetValueJSON<int>(msg.From.Id, UserParam.ChooseWidth) == -1)
             {
-                choose_weight = 0;
-                await bot.SendMessage(msg.Chat, $"Введите ширину (от 10 до {img_width})");
+                AddValueJSON(msg.From.Id, UserParam.ChooseWidth, 0);
+                await bot.SendMessage(msg.Chat, $"Введите ширину (от 10 до {GetValueJSON<int>(msg.From.Id, UserParam.ImgWidth)})");
                 return;
             }
 
-            if (!int.TryParse(msg.Text, out user_input) || user_input < 10 || user_input > (choose_height == -1 ? img_width : img_height))
+            if (!int.TryParse(msg.Text, out int user_input_1) || user_input_1 < 10 ||
+                user_input_1 > (GetValueJSON<int>(msg.From.Id, UserParam.ChooseHeight) == -1 ? 
+                GetValueJSON<int>(msg.From.Id, UserParam.ImgWidth) : 
+                GetValueJSON<int>(msg.From.Id, UserParam.ImgHeight)))
             {
-                await bot.SendMessage(msg.Chat, $"Нужно ввести число от 10 до {(choose_height == -1 ? img_width : img_height)}");
+                await bot.SendMessage(msg.Chat, $"Нужно ввести число от 10 до {(GetValueJSON<int>(msg.From.Id, UserParam.ChooseHeight) == -1 ? 
+                    GetValueJSON<int>(msg.From.Id, UserParam.ImgWidth) : 
+                    GetValueJSON<int>(msg.From.Id, UserParam.ImgHeight))}");
                 return;
             }
 
-            WriteLog($"Пользователь с id {msg.From.Id} ввёл ширину {user_input}");
+            AddValueJSON(msg.From.Id, UserParam.UserInput, user_input_1);
 
-            if (choose_height == -1)
+            if (GetValueJSON<int>(msg.From.Id, UserParam.ChooseHeight) == -1)
             {
-                choose_height = 0;
-                choose_weight = user_input;
-                await bot.SendMessage(msg.Chat, $"Введите высоту (от 10 до {img_height})");
+                WriteLog($"Пользователь с id {msg.From.Id} ввёл ширину {GetValueJSON<int>(msg.From.Id, UserParam.UserInput)}");
+                AddValueJSON(msg.From.Id, UserParam.ChooseHeight, 0);
+                AddValueJSON(msg.From.Id, UserParam.ChooseWidth, GetValueJSON<int>(msg.From.Id, UserParam.UserInput));
+                await bot.SendMessage(msg.Chat, $"Введите высоту (от 10 до {GetValueJSON<int>(msg.From.Id, UserParam.ImgHeight)})");
                 return;
             }
 
-            WriteLog($"Пользователь с id {msg.From.Id} ввёл высоту {user_input}");
+            WriteLog($"Пользователь с id {msg.From.Id} ввёл высоту {GetValueJSON<int>(msg.From.Id, UserParam.UserInput)}");
+            AddValueJSON(msg.From.Id, UserParam.ChooseHeight, GetValueJSON<int>(msg.From.Id, UserParam.UserInput));
 
-            choose_height = user_input;
-            double aspectRatio = (double)choose_weight / choose_height;
+            double aspectRatio = (double)GetValueJSON<int>(msg.From.Id, UserParam.ChooseWidth) / GetValueJSON<int>(msg.From.Id, UserParam.ChooseHeight);
             if (aspectRatio > 20 || aspectRatio < 0.05) 
             {
-                choose_height = -1;
+                AddValueJSON(msg.From.Id, UserParam.ChooseHeight, -1);
                 await bot.SendMessage(msg.Chat, "Недопустимое соотношение сторон для отправки в телеграмм. Попробуйте другие размеры");
-                await bot.SendMessage(msg.Chat, $"Введите ширину (от 10 до {img_width})");
+                await bot.SendMessage(msg.Chat, $"Введите ширину (от 10 до {GetValueJSON<int>(msg.From.Id, UserParam.ImgWidth)})");
                 return;
             }
 
-            await ChangingSize(bot, msg.Chat, image_name, choose_weight, choose_height);
+            await ChangingSize(bot, msg.Chat, 
+                GetValueJSON<string>(msg.From.Id, UserParam.ImageName), 
+                GetValueJSON<int>(msg.From.Id, UserParam.ChooseWidth), 
+                GetValueJSON<int>(msg.From.Id, UserParam.ChooseHeight));
 
-            choose_weight = -1;
-            choose_height = -1;
+            AddValueJSON(msg.From.Id, UserParam.ChooseWidth, -1);
+            AddValueJSON(msg.From.Id, UserParam.ChooseHeight, -1);
 
             break;
 
         case 3:
-            await BWFilter(bot, msg.Chat, image_name);
+            await BWFilter(bot, msg.Chat, GetValueJSON<string>(msg.From.Id, UserParam.ImageName));
             break;
 
         case 4:      
-            if (user_input == -1)
+            if (GetValueJSON<int>(msg.From.Id, UserParam.UserInput) == -1)
             {
-                user_input = 0;
+                AddValueJSON(msg.From.Id, UserParam.UserInput, 0);
                 await bot.SendMessage(msg.Chat, $"Введите интенсивность от -10 до 10 (0 - никаких изменений)");
                 return;
             }
 
-            if (!int.TryParse(msg.Text, out user_input) || user_input < -10 || user_input > 10)
+            if (!int.TryParse(msg.Text, out int user_input_2) || user_input_2 < -10 || user_input_2 > 10)
             {
                 await bot.SendMessage(msg.Chat, $"Нужно ввести число от -10 до 10");
                 return;
             }
 
-            WriteLog($"Пользователь с id {msg.From.Id} ввёл интенсивность {user_input}");
+            AddValueJSON(msg.From.Id, UserParam.UserInput, user_input_2);
+            WriteLog($"Пользователь с id {msg.From.Id} ввёл интенсивность {GetValueJSON<int>(msg.From.Id, UserParam.UserInput)}");
 
-            await ContrastFilter(bot, msg.Chat, image_name, user_input > 0 ? 1f + (float)user_input / 10 : ((float)user_input + 10) / 10);
+            await ContrastFilter(bot, msg.Chat, 
+                GetValueJSON<string>(msg.From.Id, UserParam.ImageName), 
+                GetValueJSON<int>(msg.From.Id, UserParam.UserInput) > 0 ? 
+                1f + (float)GetValueJSON<int>(msg.From.Id, UserParam.UserInput) / 10 : 
+                ((float)GetValueJSON<int>(msg.From.Id, UserParam.UserInput) + 10) / 10);
             break;
 
         case 5:             
-            if (user_input == -1)
+            if (GetValueJSON<int>(msg.From.Id, UserParam.UserInput) == -1)
             {
-                user_input = 0;
+                AddValueJSON(msg.From.Id, UserParam.UserInput, 0);
                 await bot.SendMessage(msg.Chat, $"Введите интенсивность от -10 до 10 (0 - никаких изменений)");
                 return;
             }
 
-            if (!int.TryParse(msg.Text, out user_input) || user_input < -10 || user_input > 10)
+            if (!int.TryParse(msg.Text, out int user_input_3) || user_input_3 < -10 || user_input_3 > 10)
             {
                 await bot.SendMessage(msg.Chat, $"Нужно ввести число от -10 до 10");
                 return;
             }
 
-            WriteLog($"Пользователь с id {msg.From.Id} ввёл интенсивность {user_input}");
+            AddValueJSON(msg.From.Id, UserParam.UserInput, user_input_3);
+            WriteLog($"Пользователь с id {msg.From.Id} ввёл интенсивность {GetValueJSON<int>(msg.From.Id, UserParam.UserInput)}");
 
-            await BrightnessFilter(bot, msg.Chat, image_name, user_input > 0 ? 1f + (float)user_input / 10 : ((float)user_input + 10) / 10);
+            await BrightnessFilter(bot, msg.Chat, 
+                GetValueJSON<string>(msg.From.Id, UserParam.ImageName), 
+                GetValueJSON<int>(msg.From.Id, UserParam.UserInput) > 0 ? 
+                1f + (float)GetValueJSON<int>(msg.From.Id, UserParam.UserInput) / 10 : 
+                ((float)GetValueJSON<int>(msg.From.Id, UserParam.UserInput) + 10) / 10);
             break;
 
         case 6:
-            await VignetteFilter(bot, msg.Chat, image_name);
+            await VignetteFilter(bot, msg.Chat, GetValueJSON<string>(msg.From.Id, UserParam.ImageName));
             break;
 
         case 7:
-            if (user_input == -1)
+            if (GetValueJSON<int>(msg.From.Id, UserParam.UserInput) == -1)
             {
-                user_input = 0;
+                AddValueJSON(msg.From.Id, UserParam.UserInput, 0);
                 await bot.SendMessage(msg.Chat, $"Введите силу усиления от 0 до 255");
                 return;
             }
 
-            if (!int.TryParse(msg.Text, out user_input) || user_input < 0 || user_input > 255)
+            if (!int.TryParse(msg.Text, out int user_input_4) || user_input_4 < 0 || user_input_4 > 255)
             {
                 await bot.SendMessage(msg.Chat, $"Нужно ввести число от 0 до 255");
                 return;
             }
 
-            WriteLog($"Пользователь с id {msg.From.Id} ввёл силу усиления {user_input}");
+            AddValueJSON(msg.From.Id, UserParam.UserInput, user_input_4);
+            WriteLog($"Пользователь с id {msg.From.Id} ввёл силу усиления {GetValueJSON<int>(msg.From.Id, UserParam.UserInput)}");
 
-            await RedFilter(bot, msg.Chat, image_name, (byte)user_input);
+            await RedFilter(bot, msg.Chat, GetValueJSON<string>(msg.From.Id, UserParam.ImageName), (byte)GetValueJSON<int>(msg.From.Id, UserParam.UserInput));
             break;
 
         case 8:
-            if (user_input == -1)
+            if (GetValueJSON<int>(msg.From.Id, UserParam.UserInput) == -1)
             {
-                user_input = 0;
+                AddValueJSON(msg.From.Id, UserParam.UserInput, 0);
                 await bot.SendMessage(msg.Chat, $"Введите силу усиления от 0 до 255");
                 return;
             }
 
-            if (!int.TryParse(msg.Text, out user_input) || user_input < 0 || user_input > 255)
+            if (!int.TryParse(msg.Text, out int user_input_5) || user_input_5 < 0 || user_input_5 > 255)
             {
                 await bot.SendMessage(msg.Chat, $"Нужно ввести число от 0 до 255");
                 return;
             }
 
-            WriteLog($"Пользователь с id {msg.From.Id} ввёл силу усиления {user_input}");
+            AddValueJSON(msg.From.Id, UserParam.UserInput, user_input_5);
+            WriteLog($"Пользователь с id {msg.From.Id} ввёл силу усиления {GetValueJSON<int>(msg.From.Id, UserParam.UserInput)}");
 
-            await GreenFilter(bot, msg.Chat, image_name, (byte)user_input);
+            await GreenFilter(bot, msg.Chat, GetValueJSON<string>(msg.From.Id, UserParam.ImageName), (byte)GetValueJSON<int>(msg.From.Id, UserParam.UserInput));
             break;
 
         case 9:
-            if (user_input == -1)
+            if (GetValueJSON<int>(msg.From.Id, UserParam.UserInput) == -1)
             {
-                user_input = 0;
+                AddValueJSON(msg.From.Id, UserParam.UserInput, 0);
                 await bot.SendMessage(msg.Chat, $"Введите силу усиления от 0 до 255");
                 return;
             }
 
-            if (!int.TryParse(msg.Text, out user_input) || user_input < 0 || user_input > 255)
+            if (!int.TryParse(msg.Text, out int user_input_6) || user_input_6 < 0 || user_input_6 > 255)
             {
                 await bot.SendMessage(msg.Chat, $"Нужно ввести число от 0 до 255");
                 return;
             }
 
-            WriteLog($"Пользователь с id {msg.From.Id} ввёл силу усиления {user_input}");
+            AddValueJSON(msg.From.Id, UserParam.UserInput, user_input_6);
+            WriteLog($"Пользователь с id {msg.From.Id} ввёл силу усиления {GetValueJSON<int>(msg.From.Id, UserParam.UserInput)}");
 
-            await BlueFilter(bot, msg.Chat, image_name, (byte)user_input);
+            await BlueFilter(bot, msg.Chat, GetValueJSON<string>(msg.From.Id, UserParam.ImageName), (byte)GetValueJSON<int>(msg.From.Id, UserParam.UserInput));
             break;
     }
 
-    user_input = -1;
-    image_name = "";
+    AddValueJSON(msg.From.Id, UserParam.UserInput, -1);
+    AddValueJSON(msg.From.Id, UserParam.ImageName, "");
     await bot.SendMessage(msg.Chat, "Снова отправьте фото или выберите другой фильтр /filters");
 }
