@@ -59,7 +59,7 @@ async Task OnMessage(Message msg, UpdateType type)
     {
         await InitUserJSON(msg.From.Id);
         await bot.SendMessage(msg.Chat, $"Приветсвую {msg.From.FirstName}! Я вам помогу сделать базовую обработку фото. Чтобы выбрать фильтры напишите /filters");
-        WriteLog($"Пользователь с id {msg.From.Id} написал {msg.Text}");
+        WriteLog($"Пользователь с id {msg.ReplyToMessage} написал {msg.Text}");
         return;
     }
 
