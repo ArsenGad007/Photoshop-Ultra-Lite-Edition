@@ -10,7 +10,7 @@ using static SimpleTGBot.DataSave;
 
 /// Базовые настройки бота
 using var cts = new CancellationTokenSource();
-var bot = new TelegramBotClient(File.ReadAllText("token.txt"), cancellationToken: cts.Token);
+var bot = new TelegramBotClient(File.ReadAllText("token.txt").Replace(" ", "").Replace("\n", "").Replace("\r", ""), cancellationToken: cts.Token);
 var me = await bot.GetMe();
 
 /// Удаляет все (предыдущие) изображения в директории
